@@ -1,5 +1,7 @@
 <script>
   import { onMount } from 'svelte';
+  import { fade } from 'svelte/transition';
+  import { projects } from '$lib/projects';
   let title = "icke.berlin";
   let imageWidth = 450; // Larger default size for SSR
   let showBubble = false;
@@ -184,10 +186,45 @@
   <title>{title}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fuzzy+Bubbles:wght@700&family=Jost:wght@400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fuzzy+Bubbles:wght@700&family=Jost:wght@300;400;600&display=swap" rel="stylesheet">
 </svelte:head>
 
 <canvas id="noise-canvas"></canvas>
+
+<!-- Projects showcase -->
+<div class="projects-container">
+  <div class="projects-grid">
+    {#each projects as project}
+      <div class="dictionary-card" style="--accent-color: {project.color};">
+        <div class="content-area">
+          <div class="term-container">
+            <h2 class="term">{project.name}</h2>
+            <span class="pronunciation">/{project.pronunciation || project.name.toLowerCase()}/</span>
+          </div>
+          
+          <div class="definition-container">
+            <div class="part-of-speech">noun</div>
+            <div class="definition">
+              <span class="definition-number">1.</span> 
+              <span class="definition-text">{project.description}</span>
+            </div>
+            <div class="usage">
+              <span class="usage-label">Domain:</span>
+              <a href="https://{project.domain}" target="_blank" rel="noopener noreferrer" class="usage-example">
+                {project.domain}
+              </a>
+            </div>
+          </div>
+        </div>
+        
+        <div class="logo-area">
+          <img src={project.logo} alt="{project.name} logo" class="project-logo" />
+        </div>
+      </div>
+    {/each}
+  </div>
+</div>
+
 <div class="image-container">
   <div class="image-with-bubble">
     <img 
@@ -207,16 +244,17 @@
 </div>
 
 <footer class="copyright">
-  Icke.Berlin © {new Date().getFullYear()}
+  <span>Icke.Berlin</span> © {new Date().getFullYear()}
 </footer>
 
 <style>
   :global(body) {
     margin: 0;
     padding: 0;
-    overflow: hidden;
+    overflow-x: hidden;
     position: relative;
-    background-color: #fcb766; /* Updated background color */
+    background-color: #fcb766;
+    font-family: 'Jost', sans-serif;
   }
   
   #noise-canvas {
@@ -230,7 +268,7 @@
 
   .image-container {
     position: fixed;
-    bottom: -1px;
+    bottom: 0;
     left: 0;
     width: 100%;
     display: flex;
@@ -248,19 +286,149 @@
     display: block;
     height: auto;
     max-width: 100%;
+    border-radius: 2px;
   }
   
-  /* Enhanced comic style speech bubble */
+  .projects-container {
+    position: fixed;
+    top: 60px;
+    left: 60px;
+    z-index: 3;
+    max-width: 600px;
+  }
+  
+  .projects-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  
+  .dictionary-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 0;
+    position: relative;
+    z-index: 1;
+    display: flex;
+  }
+  
+  .content-area {
+    flex: 1;
+    padding: 24px;
+  }
+  
+  .logo-area {
+    width: 256px;
+    background-color: rgba(0, 0, 0, 0.03);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0px;
+    border-left: 1px solid rgba(0, 0, 0, 0.08);
+  }
+  
+  .project-logo {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+  }
+  
+  .term-container {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .term {
+    font-family: 'Jost', sans-serif;
+    font-weight: 600;
+    font-size: 28px;
+    margin: 0;
+    color: #111;
+  }
+  
+  .pronunciation {
+    font-family: 'Jost', sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    color: #666;
+    font-style: italic;
+  }
+  
+  .part-of-speech {
+    font-family: 'Jost', sans-serif;
+    font-style: italic;
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 8px;
+  }
+  
+  .definition-container {
+    padding-left: 5px;
+    margin-bottom: 18px;
+  }
+  
+  .definition {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  
+  .definition-number {
+    font-family: 'Jost', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: #444;
+  }
+  
+  .definition-text {
+    font-family: 'Jost', sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #333;
+  }
+  
+  .usage {
+    font-family: 'Jost', sans-serif;
+    font-size: 14px;
+    margin-top: 10px;
+    color: #555;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  
+  .usage-label {
+    font-weight: 600;
+  }
+  
+  .usage-example {
+    color: var(--accent-color, #6E56CF);
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.2s;
+  }
+  
+  .usage-example:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+  }
+  
+  /* Comic bubble styles */
   .comic-bubble {
     position: absolute;
     top: 55%; /* Adjusted to align with mouth */
     left: 100%; /* Position at the right edge of the container */
     transform: translateY(-50%) rotate(2deg); /* Center vertically and add slight rotation */
-    min-width: 280px;
+    min-width: 220px; /* Reduced from 280px */
     background-color: white;
     border: 5px solid black;
     border-radius: 40px;
-    padding: 15px 20px;
+    padding: 15px 12px; /* Reduced horizontal padding from 20px to 12px */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -272,7 +440,7 @@
   
   .comic-text {
     font-family: 'Fuzzy Bubbles', cursive;
-    font-size: 30px;
+    font-size: 24px; /* Reduced from 30px */
     font-weight: 700;
     line-height: 1.1;
     text-align: center;
@@ -286,12 +454,12 @@
   }
   
   .comic-text:nth-child(2) {
-    font-size: 34px;
+    font-size: 28px; /* Reduced from 34px */
     transform: skew(3deg);
   }
   
   .comic-text:nth-child(3) {
-    font-size: 32px;
+    font-size: 26px; /* Reduced from 32px */
     transform: skew(-2deg);
   }
   
@@ -334,20 +502,9 @@
     color: rgba(0, 0, 0, 0.8);
     font-size: 12px;
     text-align: right;
-    z-index: 4;
-    font-weight:600;
+    z-index: 10;
+    font-weight: 600;
     letter-spacing: 1px;
-  }
-  
-  @keyframes fade-in {
-    0% {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0);
-    }
   }
   
   @keyframes comic-pop {
