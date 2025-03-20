@@ -3,6 +3,7 @@
   let title = "icke.berlin";
   let imageWidth = 450; // Larger default size for SSR
   let showBubble = false;
+  let isFirstLoad = true; // Track initial load
   
   // More direct resize handling
   function handleResize() {
@@ -12,20 +13,29 @@
       // Show speech bubble when viewport is small - increased threshold
       showBubble = width < 800;
       
+      let newWidth;
       // Adjusted scaling with larger initial sizes
       if (width > 1200) {
-        imageWidth = Math.min(500, width / 3); // Larger for big screens - 33% of width
+        newWidth = Math.min(500, width / 3); // Larger for big screens - 33% of width
       } else if (width > 768) {
-        imageWidth = Math.min(450, width / 2.5); // Medium screens - 40% of width
+        newWidth = Math.min(450, width / 2.5); // Medium screens - 40% of width
       } else {
-        imageWidth = Math.min(350, width / 2); // Small screens - 50% of width
+        newWidth = Math.min(350, width / 2); // Small screens - 50% of width
       }
       
       // Ensure integer value
-      imageWidth = Math.floor(imageWidth);
+      newWidth = Math.floor(newWidth);
+      
+      // Only apply animation if not first load
+      if (!isFirstLoad) {
+        imageWidth = newWidth;
+      } else {
+        imageWidth = newWidth;
+        isFirstLoad = false;
+      }
       
       // Debug for testing
-      console.log('Window width:', width, 'Image width:', imageWidth);
+      console.log('Window width:', width, 'Image width:', imageWidth, 'First load:', isFirstLoad);
     }
   }
   
@@ -61,9 +71,9 @@
         const x = Math.random() * canvas.width;
         const y = Math.random() * canvas.height;
         
-        // Creating irregular shapes
-        const opacity = Math.random() * 0.3 + 0.5; // 0.5 to 0.8 opacity
-        const size = Math.random() * 1.2 + 0.3; // 0.3 to 1.5px base size
+        // Creating irregular shapes with maximum opacity
+        const opacity = Math.random() * 0.05 + 0.95; // 0.95 to 1.0 opacity (maximum visibility)
+        const size = Math.random() * 1.5 + 0.5; // 0.5 to 2.0px (slightly larger)
         
         // Mainly use irregular shapes and lines
         const shapeType = Math.random() < 0.1 ? 0 : Math.floor(Math.random() * 3) + 1; // Rarely use circles
@@ -119,14 +129,14 @@
       }
       
       // WHITE NOISE - simplified and more visible
-      const whiteFlakeCount = Math.floor(canvas.width * canvas.height / 10000);
+      const whiteFlakeCount = Math.floor(canvas.width * canvas.height / 8000); // Increased density
       for (let i = 0; i < whiteFlakeCount; i++) {
         const x = Math.random() * canvas.width;
         const y = Math.random() * canvas.height;
         
-        // More visible opacity
-        const opacity = Math.random() * 0.2 + 0.4; // 0.4 to 0.6 opacity (more visible)
-        const size = Math.random() * 1.5 + 0.5; // 0.5 to 2px (larger)
+        // Maximum opacity for white flakes
+        const opacity = Math.random() * 0.05 + 0.95; // 0.95 to 1.0 opacity (maximum visibility)
+        const size = Math.random() * 2.0 + 0.8; // 0.8 to 2.8px (larger)
         
         // Simple shape types - square or dot
         const shapeType = Math.floor(Math.random() * 3);
@@ -174,13 +184,18 @@
   <title>{title}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fuzzy+Bubbles:wght@700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fuzzy+Bubbles:wght@700&family=Jost:wght@400&display=swap" rel="stylesheet">
 </svelte:head>
 
 <canvas id="noise-canvas"></canvas>
 <div class="image-container">
   <div class="image-with-bubble">
-    <img src="/icke.png" alt="icke" class="bottom-image" style="width: {imageWidth}px;" />
+    <img 
+      src="/icke.png" 
+      alt="icke" 
+      class="bottom-image" 
+      style="width: {imageWidth}px; transition: {isFirstLoad ? 'none' : 'width 0.3s ease-in-out'};" 
+    />
     {#if showBubble}
       <div class="comic-bubble">
         <span class="comic-text">Viewport</span>
@@ -190,6 +205,10 @@
     {/if}
   </div>
 </div>
+
+<footer class="copyright">
+  Icke.Berlin © {new Date().getFullYear()}
+</footer>
 
 <style>
   :global(body) {
@@ -229,7 +248,6 @@
     display: block;
     height: auto;
     max-width: 100%;
-    transition: width 0.3s ease-in-out;
   }
   
   /* Enhanced comic style speech bubble */
@@ -306,6 +324,30 @@
     transform: translateY(-50%);
     z-index: -1;
     left: auto; /* Ensure right positioning works */
+  }
+  
+  .copyright {
+    position: fixed;
+    bottom: 12px;
+    right: 16px;
+    font-family: 'Jost', sans-serif;
+    color: rgba(0, 0, 0, 0.8);
+    font-size: 12px;
+    text-align: right;
+    z-index: 4;
+    font-weight:600;
+    letter-spacing: 1px;
+  }
+  
+  @keyframes fade-in {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   
   @keyframes comic-pop {
