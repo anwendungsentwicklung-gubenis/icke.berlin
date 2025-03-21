@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background shape - slightly rounded square with gradient -->
+  <rect x="56" y="56" width="400" height="400" rx="40" fill="url(#greenGradient)"/>
+  
+  <!-- Stylized V in Jost font style -->
+  <path d="M256 380 L150 130 C148 125 146 120 144 118 C142 116 138 115 132 115 L124 115 L124 95 L208 95 L208 115 L196 115 C192 115 189 116 187 117 C185 118 184 120 184 123 C184 124 184 125 185 127 C186 129 186 130 187 132 L267 330 L346 133 C347 130 347 128 347 127 C347 124 346 122 344 121 C342 119 339 118 335 118 L320 118 L320 95 L392 95 L392 115 L383 115 C373 115 365 121 360 132 L261 380 L256 380 Z" 
+        fill="white"/>
+  
+  <!-- Linear gradient definition -->
+  <defs>
+    <linearGradient id="greenGradient" x1="56" y1="56" x2="456" y2="456" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4CAF50"/>
+      <stop offset="1" stop-color="#1B5E20"/>
+    </linearGradient>
+  </defs>
+</svg> 

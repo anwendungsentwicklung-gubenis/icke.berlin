@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Minimal chemical reaction diagram -->
+  <!-- Molecule 1 -->
+  <circle cx="150" cy="256" r="40" fill="#E1F5FE" stroke="#1565C0" stroke-width="6"/>
+  
+  <!-- Molecule 2 -->
+  <circle cx="362" cy="256" r="40" fill="#E1F5FE" stroke="#1565C0" stroke-width="6"/>
+  
+  <!-- Reaction arrow -->
+  <path d="M205 256 L307 256" stroke="#1565C0" stroke-width="8" stroke-linecap="round"/>
+  <path d="M290 235 L315 256 L290 277" stroke="#1565C0" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Energy/Light symbol -->
+  <path d="M256 150 L256 120" stroke="#FFD700" stroke-width="6" stroke-linecap="round"/>
+  <path d="M235 160 L215 140" stroke="#FFD700" stroke-width="6" stroke-linecap="round"/>
+  <path d="M277 160 L297 140" stroke="#FFD700" stroke-width="6" stroke-linecap="round"/>
+  <path d="M256 190 L256 312" stroke="#FFD700" stroke-width="6" stroke-linecap="round" stroke-dasharray="12 8"/>
+</svg> 

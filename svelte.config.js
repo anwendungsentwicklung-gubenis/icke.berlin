@@ -17,6 +17,17 @@ const config = {
 		}),
 		paths: {
 			base: process.env.NODE_ENV === 'production' ? '/icke.berlin' : ''
+		},
+		prerender: {
+			handleHttpError: ({ path, referrer, message }) => {
+				// Ignore 404s that happen during prerendering
+				if (message.includes('window is not defined')) {
+					return;
+				}
+        
+				// Otherwise, fail the build
+				throw new Error(message);
+			}
 		}
 	}
 };

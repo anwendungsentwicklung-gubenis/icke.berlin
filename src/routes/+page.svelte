@@ -2,10 +2,21 @@
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
   import { projects } from '$lib/projects';
+  import FlowerTyper from '$lib/flowertyper/FlowerTyper.svelte';
+  import FlowerLogo from '$lib/flowertyper/FlowerLogo.svelte';
+  
   let title = "icke.berlin";
   let imageWidth = 450; // Larger default size for SSR
   let showBubble = false;
   let isFirstLoad = true; // Track initial load
+  
+  // Example phrases for the FlowerTyper
+  const welcomePhrases = [
+    "Welcome to icke.berlin",
+    "Explore my projects",
+    "Check out what I build",
+    "Stay a while and browse"
+  ];
   
   // More direct resize handling
   function handleResize() {
@@ -208,6 +219,15 @@
               <span class="definition-number">1.</span> 
               <span class="definition-text">{project.description}</span>
             </div>
+            {#if project.keywords && project.keywords.length > 0}
+              <div class="keywords-container">
+                {#each project.keywords as keyword}
+                  <span class="keyword" style="background-color: {project.color}20; color: {project.color};">
+                    {keyword}
+                  </span>
+                {/each}
+              </div>
+            {/if}
             <div class="usage">
               <span class="usage-label">Domain:</span>
               <a href="https://{project.domain}" target="_blank" rel="noopener noreferrer" class="usage-example">
@@ -218,7 +238,27 @@
         </div>
         
         <div class="logo-area">
-          <img src={project.logo} alt="{project.name} logo" class="project-logo" />
+          <div class="logo-container">
+            {#if project.useTyper}
+              <div class="viveros-logo">
+                <FlowerLogo 
+                  text="V" 
+                  color={project.color}
+                />
+              </div>
+            {:else if project.logo}
+              <img src={project.logo} alt="{project.name} logo" class="project-logo" />
+            {:else}
+              <div class="fallback-logo" style="background-color: {project.color}20;">
+                <FlowerTyper 
+                  text={project.name.charAt(0)} 
+                  speed={3}
+                  cursor={false}
+                  style="color: {project.color}; font-size: 120px; font-weight: 600; font-family: 'Jost', sans-serif; line-height: 1;"
+                />
+              </div>
+            {/if}
+          </div>
         </div>
       </div>
     {/each}
@@ -228,7 +268,7 @@
 <div class="image-container">
   <div class="image-with-bubble">
     <img 
-      src="/icke.png" 
+      src="./icke.png" 
       alt="icke" 
       class="bottom-image" 
       style="width: {imageWidth}px; transition: {isFirstLoad ? 'none' : 'width 0.3s ease-in-out'};" 
@@ -268,18 +308,27 @@
 
   .image-container {
     position: fixed;
-    bottom: 0;
+    bottom: -2px;
     left: 0;
     width: 100%;
     display: flex;
     justify-content: flex-start;
     align-items: flex-end;
-    z-index: 2; /* Above the noise layer */
+    z-index: 2; /* Lower z-index by default */
+    pointer-events: none; /* Let clicks go through to the projects below */
+  }
+  
+  /* On small screens, increase z-index to show above projects */
+  @media (max-width: 768px) {
+    .image-container {
+      z-index: 4; /* Higher z-index on small screens */
+    }
   }
   
   .image-with-bubble {
     position: relative;
     display: inline-block;
+    pointer-events: auto; /* Restore pointer events for the image and bubble */
   }
 
   .bottom-image {
@@ -293,25 +342,90 @@
     position: fixed;
     top: 60px;
     left: 60px;
+    right: 60px;
     z-index: 3;
-    max-width: 600px;
+    width: auto;
+    bottom: 60px; /* Match the top padding */
+    overflow-y: auto; /* Make it scrollable */
+    /* Customize scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  }
+  
+  /* Custom scrollbar for webkit browsers */
+  .projects-container::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .projects-container::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .projects-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+  }
+  
+  /* On mobile screens, adjust the container to allow space for image and bubble */
+  @media (max-width: 768px) {
+    .projects-container {
+      /* Set bottom to allow space for image and bubble */
+      bottom: 70px; /* Adjusted to visually match top padding */
+    }
   }
   
   .projects-grid {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 24px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    width: 100%;
+    padding-right: 16px; /* Increased padding for shadow */
+    padding-bottom: 16px; /* Added padding for bottom shadow */
+  }
+  
+  /* Media query for 2-column layout with increasing gaps for larger screens */
+  @media (min-width: 1000px) {
+    .projects-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: clamp(24px, 4vw, 40px);
+    }
+  }
+  
+  @media (min-width: 1400px) {
+    .projects-grid {
+      gap: clamp(40px, 6vw, 80px);
+    }
+  }
+  
+  @media (min-width: 1800px) {
+    .projects-grid {
+      gap: clamp(80px, 10vw, 180px);
+    }
+  }
+  
+  @media (min-width: 2200px) {
+    .projects-grid {
+      gap: clamp(120px, 14vw, 250px);
+    }
   }
   
   .dictionary-card {
     background: rgba(255, 255, 255, 0.95);
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.25), 0 0 0 2px rgba(0, 0, 0, 0.1);
     padding: 0;
     position: relative;
     z-index: 1;
     display: flex;
+    width: 100%;
+    min-width: 0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .dictionary-card:hover {
+    transform: translateY(-2px) translateX(-2px);
+    box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(0, 0, 0, 0.1);
   }
   
   .content-area {
@@ -322,11 +436,18 @@
   .logo-area {
     width: 256px;
     background-color: rgba(0, 0, 0, 0.03);
-    display: flex;
+    display: none; /* Hide by default on small screens */
     align-items: center;
     justify-content: center;
     padding: 0px;
     border-left: 1px solid rgba(0, 0, 0, 0.08);
+  }
+  
+  /* Show logos on medium screens and above */
+  @media (min-width: 768px) {
+    .logo-area {
+      display: flex;
+    }
   }
   
   .project-logo {
@@ -433,7 +554,7 @@
     flex-direction: column;
     align-items: center;
     box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.8);
-    z-index: 3;
+    z-index: 3; /* Lower than the max z-index of projects */
     margin-left: 5px; /* Small gap between image and bubble */
     animation: comic-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.5) forwards;
   }
@@ -524,6 +645,79 @@
     }
     100% {
       transform: translateY(-50%) scale(1) rotate(2deg);
+    }
+  }
+  
+  .keywords-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0;
+  }
+  
+  .keyword {
+    font-family: 'Jost', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 50px;
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .welcome-text {
+    font-family: 'Jost', sans-serif;
+    font-size: 32px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.8);
+    margin-bottom: 32px;
+    text-align: center;
+  }
+  
+  .fallback-logo, .viveros-logo {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  
+  .viveros-logo {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 220px;
+  }
+  
+  /* Adjust bubble position on very small screens */
+  @media (max-width: 450px) {
+    .comic-bubble {
+      top: 40%; /* Move it higher up */
+      min-width: 180px; /* Make it smaller */
+      padding: 12px 10px; /* Reduce padding */
+    }
+    
+    .comic-text {
+      font-size: 20px; /* Smaller text */
+    }
+    
+    .comic-text:nth-child(2) {
+      font-size: 24px;
+    }
+    
+    .comic-text:nth-child(3) {
+      font-size: 22px;
+    }
+  }
+  
+  /* On small screens, increase z-index for bubble */
+  @media (max-width: 768px) {
+    .comic-bubble {
+      z-index: 5; /* Higher z-index on small screens */
     }
   }
 </style>
