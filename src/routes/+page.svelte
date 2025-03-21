@@ -46,9 +46,6 @@
         imageWidth = newWidth;
         isFirstLoad = false;
       }
-      
-      // Debug for testing
-      console.log('Window width:', width, 'Image width:', imageWidth, 'First load:', isFirstLoad);
     }
   }
   
@@ -229,7 +226,6 @@
               </div>
             {/if}
             <div class="usage">
-              <span class="usage-label">Domain:</span>
               <a href="https://{project.domain}" target="_blank" rel="noopener noreferrer" class="usage-example">
                 {project.domain}
               </a>
@@ -379,8 +375,7 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 20px;
     width: 100%;
-    padding-right: 16px; /* Increased padding for shadow */
-    padding-bottom: 16px; /* Added padding for bottom shadow */
+    padding: 16px; /* Added padding on all sides for shadows */
   }
   
   /* Media query for 2-column layout with increasing gaps for larger screens */

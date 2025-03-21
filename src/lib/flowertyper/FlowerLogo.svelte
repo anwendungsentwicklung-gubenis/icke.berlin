@@ -117,14 +117,9 @@
   function init() {
     if (!containerEl || !mounted) return;
     
-    console.log("FlowerLogo: Initializing scene");
-    console.log("FlowerLogo: Container size:", containerEl.clientWidth, containerEl.clientHeight);
-    
     // Fix for zero width container
     const containerWidth = containerEl.clientWidth || 200; 
     const containerHeight = containerEl.clientHeight || 200;
-    
-    console.log("FlowerLogo: Using adjusted container size:", containerWidth, containerHeight);
     
     // Create a hidden canvas to render the text
     textCanvas = document.createElement('canvas');
@@ -147,6 +142,7 @@
     const far = 1000;
     camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
     camera.position.z = 4.5;
+    camera.position.y = -0.8; // Increased vertical offset to center better
     
     // Renderer setup
     try {
@@ -154,7 +150,6 @@
         antialias: true, 
         alpha: true
       });
-      console.log("FlowerLogo: WebGL renderer created successfully");
     } catch (e) {
       console.error("FlowerLogo: Failed to create WebGL renderer:", e);
       return;
@@ -245,8 +240,6 @@
       transparent: true,
     });
     
-    console.log("FlowerLogo: Materials created with textures");
-    
     // Initialize dummy for matrix transformations
     dummy = new THREE.Object3D();
     
@@ -260,7 +253,6 @@
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
       controls.rotateSpeed = 0.5;
-      console.log("FlowerLogo: OrbitControls initialized");
     } catch (e) {
       console.error("FlowerLogo: Error initializing OrbitControls:", e);
     }
@@ -276,13 +268,9 @@
     
     // Handle window resize
     window.addEventListener('resize', onWindowResize);
-    
-    console.log("FlowerLogo: Initialization complete");
   }
   
   function sampleCoordinates() {
-    console.log("FlowerLogo: Sampling coordinates for text:", text);
-    
     // Draw text
     textCanvas.width = 1024;
     textCanvas.height = 1024;
@@ -297,7 +285,7 @@
     // Calculate text height better (approx 70% of font size)
     const textHeight = textureFontSize * 0.7;
     const centerX = (textCanvas.width - textWidth) / 2;
-    const centerY = textCanvas.height / 2 + textHeight/3; // Add offset to center vertically
+    const centerY = textCanvas.height / 2 + textHeight/2; // Increased offset for better centering
     
     // Draw text centered
     textCtx.fillText(text, centerX, centerY);
@@ -343,8 +331,6 @@
       }
       if (particles.length >= 500) break;
     }
-    
-    console.log(`FlowerLogo: Created ${particles.length} particles`);
   }
   
   function recreateInstancedMesh() {
@@ -355,8 +341,6 @@
     // Count particles by type
     const totalNumberOfFlowers = particles.filter(v => v.type === 0).length;
     const totalNumberOfLeafs = particles.filter(v => v.type === 1).length;
-    
-    console.log("FlowerLogo: Creating instanced meshes with", totalNumberOfFlowers, "flowers and", totalNumberOfLeafs, "leaves");
     
     // Create new instanced meshes
     flowerInstancedMesh = new THREE.InstancedMesh(particleGeometry, flowerMaterial, Math.max(1, totalNumberOfFlowers));
@@ -396,14 +380,12 @@
   
   function animate() {
     if (!mounted) {
-      console.log("FlowerLogo: Animation stopped - component not mounted");
       return;
     }
     
     animationFrameId = requestAnimationFrame(animate);
     
     if (!particles.length || !flowerInstancedMesh || !leafInstancedMesh || !dummy) {
-      console.warn("FlowerLogo: Animation - missing required objects");
       return;
     }
     
@@ -455,27 +437,21 @@
   
   onMount(() => {
     if (typeof window !== 'undefined') {
-      console.log("FlowerLogo: Component mounted");
       mounted = true;
       // Wait a bit for the container to be properly sized
       setTimeout(() => {
-        console.log("FlowerLogo: Starting initialization");
         init();
       }, 100);
-    } else {
-      console.log("FlowerLogo: Not in browser environment, skipping initialization");
     }
   });
   
   onDestroy(() => {
-    console.log("FlowerLogo: Component being destroyed");
     mounted = false;
     
     if (typeof window === 'undefined') return;
     
     if (animationFrameId) {
       cancelAnimationFrame(animationFrameId);
-      console.log("FlowerLogo: Animation frame canceled");
     }
     
     if (renderer && containerEl) {
