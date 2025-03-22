@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { fade } from 'svelte/transition';
+  import { fade, fly } from 'svelte/transition';
   import { projects } from '$lib/projects';
   import FlowerTyper from '$lib/flowertyper/FlowerTyper.svelte';
   import FlowerLogo from '$lib/flowertyper/FlowerLogo.svelte';
@@ -9,6 +9,8 @@
   let imageWidth = 450; // Larger default size for SSR
   let showBubble = false;
   let isFirstLoad = true; // Track initial load
+  let currentProjectIndex = 0; // For mobile swipe view
+  let isMobile = false; // Track if we're on mobile
   
   // Example phrases for the FlowerTyper
   const welcomePhrases = [
@@ -25,6 +27,9 @@
       
       // Show speech bubble when viewport is small - increased threshold
       showBubble = width < 800;
+      
+      // Track if we're on mobile for swipe view
+      isMobile = width < 768;
       
       let newWidth;
       // Adjusted scaling with larger initial sizes
@@ -46,6 +51,76 @@
         imageWidth = newWidth;
         isFirstLoad = false;
       }
+    }
+  }
+  
+  // Handle swipe functionality
+  let touchStartX = 0;
+  let touchEndX = 0;
+  let swipeDirection = null; // 'left' or 'right'
+  let isTransitioning = false;
+  
+  function handleTouchStart(e) {
+    touchStartX = e.changedTouches[0].screenX;
+  }
+  
+  function handleTouchMove(e) {
+    // Don't process if already transitioning
+    if (isTransitioning) return;
+    
+    const currentX = e.changedTouches[0].screenX;
+    const diff = currentX - touchStartX;
+    
+    if (Math.abs(diff) > 20) {
+      swipeDirection = diff > 0 ? 'right' : 'left';
+    }
+  }
+  
+  function handleTouchEnd(e) {
+    if (isTransitioning) return;
+    
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+  }
+  
+  function handleSwipe() {
+    const swipeThreshold = 50; // Minimum distance to register as swipe
+    const diff = touchEndX - touchStartX;
+    
+    if (Math.abs(diff) < swipeThreshold) return; // Not a significant swipe
+    
+    // Set transitioning state
+    isTransitioning = true;
+    
+    if (diff > 0) {
+      // Swipe right - show previous project
+      swipeDirection = 'right';
+      prevProject();
+    } else {
+      // Swipe left - show next project
+      swipeDirection = 'left';
+      nextProject();
+    }
+    
+    // Reset transitioning state after animation
+    setTimeout(() => {
+      isTransitioning = false;
+    }, 450); // Slightly longer than the total animation duration
+  }
+  
+  function nextProject() {
+    if (currentProjectIndex < projects.length - 1) {
+      currentProjectIndex++;
+    } else {
+      currentProjectIndex = 0; // Loop back to first
+    }
+  }
+  
+  function prevProject() {
+    if (currentProjectIndex > 0) {
+      currentProjectIndex--;
+    } else {
+      currentProjectIndex = projects.length - 1; // Loop to last
     }
   }
   
@@ -201,64 +276,138 @@
 
 <!-- Projects showcase -->
 <div class="projects-container">
-  <div class="projects-grid">
-    {#each projects as project}
-      <div class="dictionary-card" style="--accent-color: {project.color};">
-        <div class="content-area">
-          <div class="term-container">
-            <h2 class="term">{project.name}</h2>
-            <span class="pronunciation">/{project.pronunciation || project.name.toLowerCase()}/</span>
+  <!-- Mobile swipe view -->
+  {#if isMobile}
+    <div 
+      class="mobile-project-swipe {swipeDirection ? `swiping-${swipeDirection}` : ''}" 
+      on:touchstart={handleTouchStart}
+      on:touchmove={handleTouchMove} 
+      on:touchend={handleTouchEnd}
+    >
+      <div class="swipe-indicator">
+        <div class="indicator-dots">
+          {#each projects as _, i}
+            <div class="dot {i === currentProjectIndex ? 'active' : ''}"></div>
+          {/each}
+        </div>
+        <div class="swipe-hint">Swipe to browse projects</div>
+      </div>
+      
+      <div class="card-container">
+        {#key currentProjectIndex}
+          <div class="dictionary-card" 
+            style="--accent-color: {projects[currentProjectIndex].color};"
+            in:fly={{ x: swipeDirection === 'right' ? 300 : -300, duration: 400, delay: 50, opacity: 0.2 }}
+            out:fly={{ x: swipeDirection === 'right' ? -300 : 300, duration: 300, opacity: 0.2 }}
+          >
+            <div class="mobile-card-content">
+              <div class="content-area">
+                <div class="term-container">
+                  <h2 class="term">{projects[currentProjectIndex].name}</h2>
+                  <div class="pronunciation-container">
+                    <span class="pronunciation">/{projects[currentProjectIndex].pronunciation || projects[currentProjectIndex].name.toLowerCase()}/</span>
+                    <span class="part-of-speech">noun</span>
+                  </div>
+                </div>
+                
+                <div class="definition-container">
+                  <div class="definition">
+                    <span class="definition-text">{projects[currentProjectIndex].description}</span>
+                  </div>
+                  {#if projects[currentProjectIndex].keywords && projects[currentProjectIndex].keywords.length > 0}
+                    <div class="keywords-container">
+                      {#each projects[currentProjectIndex].keywords as keyword}
+                        <span class="keyword" style="background-color: {projects[currentProjectIndex].color}20; color: {projects[currentProjectIndex].color};">
+                          {keyword}
+                        </span>
+                      {/each}
+                    </div>
+                  {/if}
+                  <div class="usage">
+                    <a href="https://{projects[currentProjectIndex].domain}" target="_blank" rel="noopener noreferrer" class="usage-example">
+                      {projects[currentProjectIndex].domain}
+                    </a>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mobile-logo-area">
+                <div class="logo-container">
+                  {#if projects[currentProjectIndex].useTyper}
+                    <div class="viveros-logo">
+                      <FlowerLogo 
+                        text="V" 
+                        color={projects[currentProjectIndex].color}
+                      />
+                    </div>
+                  {:else if projects[currentProjectIndex].logo}
+                    <img src={projects[currentProjectIndex].logo} alt="{projects[currentProjectIndex].name} logo" class="project-logo" />
+                  {/if}
+                </div>
+              </div>
+            </div>
+          </div>
+        {/key}
+      </div>
+      
+      <div class="mobile-navigation">
+        <button class="nav-button prev" on:click={prevProject} aria-label="Previous project">←</button>
+        <button class="nav-button next" on:click={nextProject} aria-label="Next project">→</button>
+      </div>
+    </div>
+  {:else}
+    <!-- Desktop grid view -->
+    <div class="projects-grid">
+      {#each projects as project}
+        <div class="dictionary-card" style="--accent-color: {project.color};">
+          <div class="content-area">
+            <div class="term-container">
+              <h2 class="term">{project.name}</h2>
+              <div class="pronunciation-container">
+                <span class="pronunciation">/{project.pronunciation || project.name.toLowerCase()}/</span>
+                <span class="part-of-speech">noun</span>
+              </div>
+            </div>
+            
+            <div class="definition-container">
+              <div class="definition">
+                <span class="definition-text">{project.description}</span>
+              </div>
+              {#if project.keywords && project.keywords.length > 0}
+                <div class="keywords-container">
+                  {#each project.keywords as keyword}
+                    <span class="keyword" style="background-color: {project.color}20; color: {project.color};">
+                      {keyword}
+                    </span>
+                  {/each}
+                </div>
+              {/if}
+              <div class="usage">
+                <a href="https://{project.domain}" target="_blank" rel="noopener noreferrer" class="usage-example">
+                  {project.domain}
+                </a>
+              </div>
+            </div>
           </div>
           
-          <div class="definition-container">
-            <div class="part-of-speech">noun</div>
-            <div class="definition">
-              <span class="definition-number">1.</span> 
-              <span class="definition-text">{project.description}</span>
-            </div>
-            {#if project.keywords && project.keywords.length > 0}
-              <div class="keywords-container">
-                {#each project.keywords as keyword}
-                  <span class="keyword" style="background-color: {project.color}20; color: {project.color};">
-                    {keyword}
-                  </span>
-                {/each}
-              </div>
-            {/if}
-            <div class="usage">
-              <a href="https://{project.domain}" target="_blank" rel="noopener noreferrer" class="usage-example">
-                {project.domain}
-              </a>
+          <div class="logo-area">
+            <div class="logo-container">
+              {#if project.useTyper}
+                <div class="viveros-logo">
+                  <FlowerLogo 
+                    text="V" 
+                    color={project.color}
+                  />
+                </div>
+              {:else if project.logo}
+                <img src={project.logo} alt="{project.name} logo" class="project-logo" />
+              {/if}
             </div>
           </div>
         </div>
-        
-        <div class="logo-area">
-          <div class="logo-container">
-            {#if project.useTyper}
-              <div class="viveros-logo">
-                <FlowerLogo 
-                  text="V" 
-                  color={project.color}
-                />
-              </div>
-            {:else if project.logo}
-              <img src={project.logo} alt="{project.name} logo" class="project-logo" />
-            {:else}
-              <div class="fallback-logo" style="background-color: {project.color}20;">
-                <FlowerTyper 
-                  text={project.name.charAt(0)} 
-                  speed={3}
-                  cursor={false}
-                  style="color: {project.color}; font-size: 120px; font-weight: 600; font-family: 'Jost', sans-serif; line-height: 1;"
-                />
-              </div>
-            {/if}
-          </div>
-        </div>
-      </div>
-    {/each}
-  </div>
+      {/each}
+    </div>
+  {/if}
 </div>
 
 <div class="image-container">
@@ -336,16 +485,17 @@
   
   .projects-container {
     position: fixed;
-    top: 60px;
-    left: 60px;
-    right: 60px;
+    top: 8px; /* Reduced from 60px */
+    left: 8px; /* Reduced from 60px */
+    right: 8px; /* Reduced from 60px */
     z-index: 3;
     width: auto;
-    bottom: 60px; /* Match the top padding */
-    overflow-y: auto; /* Make it scrollable */
-    /* Customize scrollbar */
+    bottom: 60px; /* Keep bottom padding for the image */
+    overflow-y: auto;
+    overflow-x: hidden; /* Prevent horizontal scrolling while allowing shadows to be visible */
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+    padding: 5px; /* Add small padding to prevent shadow clipping */
   }
   
   /* Custom scrollbar for webkit browsers */
@@ -366,7 +516,8 @@
   @media (max-width: 768px) {
     .projects-container {
       /* Set bottom to allow space for image and bubble */
-      bottom: 70px; /* Adjusted to visually match top padding */
+      bottom: 120px; /* Reduced from 200px to show more of the project area */
+      padding: 10px; /* Add padding to prevent shadow clipping */
     }
   }
   
@@ -375,7 +526,15 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 20px;
     width: 100%;
-    padding: 16px; /* Added padding on all sides for shadows */
+    padding: 12px; /* Reduced from 16px */
+  }
+  
+  /* Reduce padding on mobile screens */
+  @media (max-width: 768px) {
+    .projects-grid {
+      padding: 6px; /* Reduced from 8px */
+      gap: 10px; /* Reduced from 12px */
+    }
   }
   
   /* Media query for 2-column layout with increasing gaps for larger screens */
@@ -425,7 +584,7 @@
   
   .content-area {
     flex: 1;
-    padding: 24px;
+    padding: 20px; /* Reduced from 24px */
   }
   
   .logo-area {
@@ -453,9 +612,9 @@
   
   .term-container {
     display: flex;
-    align-items: baseline;
-    gap: 12px;
-    margin-bottom: 16px;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
   }
   
   .term {
@@ -466,10 +625,17 @@
     color: #111;
   }
   
+  .pronunciation-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+  
   .pronunciation {
     font-family: 'Jost', sans-serif;
     font-weight: 400;
-    font-size: 16px;
+    font-size: 14px;
     color: #666;
     font-style: italic;
   }
@@ -479,26 +645,18 @@
     font-style: italic;
     font-size: 14px;
     color: #555;
-    margin-bottom: 8px;
+    text-align: right;
   }
   
   .definition-container {
     padding-left: 5px;
-    margin-bottom: 18px;
+    margin-bottom: 16px; /* Reduced from 18px */
   }
   
   .definition {
     display: flex;
     align-items: baseline;
-    gap: 8px;
     margin-bottom: 10px;
-  }
-  
-  .definition-number {
-    font-family: 'Jost', sans-serif;
-    font-weight: 600;
-    font-size: 14px;
-    color: #444;
   }
   
   .definition-text {
@@ -646,15 +804,15 @@
   .keywords-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin: 12px 0;
+    gap: 6px;
+    margin: 10px 0;
   }
   
   .keyword {
     font-family: 'Jost', sans-serif;
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 500;
-    padding: 4px 10px;
+    padding: 3px 8px;
     border-radius: 50px;
     display: inline-block;
     text-transform: uppercase;
@@ -714,5 +872,209 @@
     .comic-bubble {
       z-index: 5; /* Higher z-index on small screens */
     }
+  }
+  
+  /* Mobile swipe view styling */
+  .mobile-project-swipe {
+    width: 100%;
+    padding: 16px; /* Increased from 8px to show shadows */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: auto;
+    position: relative;
+    gap: 12px; /* Add gap between swipe indicator, card, and navigation */
+  }
+  
+  /* Card container for transitions */
+  .card-container {
+    width: 100%;
+    position: relative;
+    min-height: 500px;
+    display: flex;
+    justify-content: center;
+    overflow: visible; /* Changed from hidden to show shadows */
+    border-radius: 8px;
+    will-change: contents;
+    transform: translateZ(0);
+    box-sizing: border-box;
+    padding: 8px; /* Added padding to show shadows */
+  }
+  
+  /* Swipe direction indicators */
+  .swiping-left .card-container::after,
+  .swiping-right .card-container::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    animation: indicatorPulse 0.5s infinite alternate;
+  }
+  
+  .swiping-left .card-container::after {
+    right: -10px;
+    clip-path: polygon(40% 0%, 100% 50%, 40% 100%, 40% 75%, 70% 50%, 40% 25%);
+  }
+  
+  .swiping-right .card-container::before {
+    left: -10px;
+    clip-path: polygon(60% 0%, 60% 25%, 30% 50%, 60% 75%, 60% 100%, 0% 50%);
+  }
+  
+  @keyframes indicatorPulse {
+    from { opacity: 0.7; }
+    to { opacity: 0.3; }
+  }
+  
+  /* Mobile view card styling */
+  .mobile-project-swipe .dictionary-card {
+    width: 100%;
+    position: absolute; /* Back to absolute positioning for smooth transitions */
+    left: 0;
+    top: 0;
+    animation-fill-mode: forwards;
+    transform-origin: center;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.25), 0 0 0 2px rgba(0, 0, 0, 0.1);
+    will-change: transform;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  
+  .swipe-indicator {
+    text-align: center;
+    margin-bottom: 4px; /* Reduced from 8px */
+    width: 100%;
+  }
+  
+  .indicator-dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px; /* Reduced from 8px */
+    margin-bottom: 4px; /* Reduced from 8px */
+  }
+  
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s, transform 0.3s;
+  }
+  
+  .dot.active {
+    background-color: rgba(0, 0, 0, 0.6);
+    transform: scale(1.3);
+  }
+  
+  .swipe-hint {
+    font-size: 12px; /* Increased from 11px */
+    color: rgba(0, 0, 0, 0.7); /* Increased contrast from 0.5 to 0.7 */
+    margin-bottom: 4px;
+    font-weight: 500; /* Added font weight for better visibility */
+    animation: pulse 3s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 0.9; } /* Increased from 0.8 */
+    50% { opacity: 0.7; } /* Increased from 0.5 */
+  }
+  
+  /* Mobile navigation - position directly under the card */
+  .mobile-navigation {
+    display: flex;
+    justify-content: center;
+    gap: 20px; /* Reduced from 40px to bring arrows closer together */
+    width: 100%;
+    margin-top: 0;
+    margin-bottom: 12px;
+    padding: 0;
+    position: relative;
+    z-index: 5;
+  }
+  
+  .nav-button {
+    background-color: transparent;
+    border: none;
+    border-radius: 50%;
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px; /* Increased from 24px for better visibility */
+    color: rgba(0, 0, 0, 0.8); /* Darker color for better contrast */
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: none;
+    transition: none;
+  }
+  
+  .nav-button:hover {
+    background-color: transparent;
+    transform: none;
+  }
+  
+  .nav-button:active {
+    transform: none;
+    background-color: transparent;
+    box-shadow: none;
+  }
+  
+  /* Mobile card layout - vertical for small screens */
+  .mobile-card-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0; /* Allow content to shrink if needed */
+    overflow: hidden; /* Prevent content overflow */
+  }
+  
+  .mobile-card-content .content-area {
+    padding: 16px 16px 14px; /* Slightly reduced bottom padding */
+  }
+  
+  .mobile-logo-area {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.03);
+    padding: 10px;
+    padding-bottom: 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    box-sizing: border-box;
+    min-height: 240px; /* Increased from 180px */
+  }
+  
+  .mobile-logo-area .logo-container {
+    width: 100%;
+    max-width: 220px;
+    height: 220px; /* Increased from 160px */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .mobile-logo-area .project-logo {
+    max-width: 100%;
+    max-height: 220px; /* Increased from 160px */
+    object-fit: contain;
+  }
+  
+  .mobile-project-swipe .viveros-logo {
+    min-height: 220px; /* Increased from 160px */
   }
 </style>
