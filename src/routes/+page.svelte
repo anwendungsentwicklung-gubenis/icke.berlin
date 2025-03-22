@@ -11,8 +11,6 @@
   let isFirstLoad = true; // Track initial load
   let currentProjectIndex = 0; // For mobile swipe view
   let isMobile = false; // Track if we're on mobile
-  let lastFocusedElement = null; // Track last focused element for focus trap
-  let isLoading = true; // Initial loading state
   
   // Example phrases for the FlowerTyper
   const welcomePhrases = [
@@ -116,8 +114,6 @@
     } else {
       currentProjectIndex = 0; // Loop back to first
     }
-    announceProjectChange();
-    focusProjectContent();
   }
   
   function prevProject() {
@@ -126,83 +122,6 @@
     } else {
       currentProjectIndex = projects.length - 1; // Loop to last
     }
-    announceProjectChange();
-    focusProjectContent();
-  }
-  
-  function announceProjectChange() {
-    const projectIndex = currentProjectIndex + 1;
-    const totalProjects = projects.length;
-    const currentProject = projects[currentProjectIndex];
-    
-    // Create more detailed announcement
-    const announcement = `Project ${projectIndex} of ${totalProjects}: ${currentProject.name}. ${currentProject.description.substring(0, 100)}...`;
-    
-    // Set announcement for screen readers
-    const announcementEl = document.getElementById('project-announcement');
-    if (announcementEl) {
-      announcementEl.textContent = announcement;
-    }
-  }
-  
-  function handleKeyDown(event) {
-    // Handle keyboard navigation for the slider
-    if (event.key === 'ArrowLeft') {
-      prevProject();
-    } else if (event.key === 'ArrowRight') {
-      nextProject();
-    }
-  }
-  
-  function handleDotKeydown(event, index) {
-    // Handle keyboard navigation for the dots
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      currentProjectIndex = index;
-    }
-  }
-  
-  // Handle modal focus trap for keyboard users
-  function trapFocus(event) {
-    // Only handle Tab key
-    if (event.key !== 'Tab') return;
-    
-    // Find all focusable elements in the current project card
-    const focusableElements = document.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
-    
-    // If no focusable elements, prevent tab
-    if (focusableElements.length === 0) {
-      event.preventDefault();
-      return;
-    }
-    
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements[focusableElements.length - 1];
-    
-    // Shift+Tab from first element should focus last element
-    if (event.shiftKey && document.activeElement === firstElement) {
-      event.preventDefault();
-      lastElement.focus();
-    } 
-    // Tab from last element should focus first element
-    else if (!event.shiftKey && document.activeElement === lastElement) {
-      event.preventDefault();
-      firstElement.focus();
-    }
-  }
-  
-  // Focus management for accessibility
-  function focusProjectContent() {
-    // Wait for DOM update after project changes
-    setTimeout(() => {
-      const currentCard = document.querySelector('.dictionary-card[role="article"]');
-      if (currentCard) {
-        currentCard.setAttribute('tabindex', '-1');
-        currentCard.focus();
-      }
-    }, 100);
   }
   
   onMount(() => {
@@ -212,19 +131,9 @@
     // Set up resize listener directly
     window.addEventListener('resize', handleResize);
     
-    // Add keyboard navigation for projects
-    window.addEventListener('keydown', handleKeyboardNavigation);
-    
     // Initialize canvas for noise
     const canvas = document.getElementById('noise-canvas');
     const ctx = canvas.getContext('2d');
-    
-    // Make initial announcement for screen readers
-    setTimeout(() => {
-      announceProjectChange();
-      isLoading = false; // Mark loading as complete
-      focusProjectContent(); // Set initial focus
-    }, 1000);
     
     // Set canvas size to window size
     function resizeCanvas() {
@@ -352,48 +261,21 @@
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('resize', resizeCanvas);
-      window.removeEventListener('keydown', handleKeyboardNavigation);
     };
   });
-  
-  // Handle keyboard navigation
-  function handleKeyboardNavigation(e) {
-    if (e.key === 'ArrowRight') {
-      nextProject();
-    } else if (e.key === 'ArrowLeft') {
-      prevProject();
-    }
-  }
 </script>
 
 <svelte:head>
   <title>{title}</title>
-  <meta name="description" content="Portfolio of Berlin based web developer and designer.">
-  <html lang="en" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fuzzy+Bubbles:wght@700&family=Jost:wght@300;400;600&display=swap" rel="stylesheet">
 </svelte:head>
 
-<!-- Skip to main content link -->
-<a href="#main-content" class="skip-link">Skip to main content</a>
-
-<!-- Screen reader announcements -->
-<div aria-live="assertive" id="project-announcement" class="sr-only"></div>
-
-<!-- Loading indicator -->
-{#if isLoading}
-  <div class="loading-indicator" role="status" aria-label="Loading content">
-    <div class="loading-spinner"></div>
-    <span class="sr-only">Loading...</span>
-  </div>
-{/if}
-
-<canvas id="noise-canvas" aria-hidden="true"></canvas>
+<canvas id="noise-canvas"></canvas>
 
 <!-- Projects showcase -->
-<div id="main-content" class="projects-container" role="main" aria-label="Projects showcase"
-     tabindex="0" on:keydown={handleKeyDown} aria-busy={isLoading}>
+<div class="projects-container">
   <!-- Mobile swipe view -->
   {#if isMobile}
     <div 
@@ -401,32 +283,22 @@
       on:touchstart={handleTouchStart}
       on:touchmove={handleTouchMove} 
       on:touchend={handleTouchEnd}
-      role="region"
-      aria-label="Project slideshow"
-      on:keydown={trapFocus}
     >
       <div class="swipe-indicator">
-        <div class="indicator-dots" role="tablist" aria-label="Project navigation dots">
-          {#each projects as project, i}
-            <div class="dot {i === currentProjectIndex ? 'active' : ''}" 
-                 role="tab" 
-                 tabindex={i === currentProjectIndex ? "0" : "-1"}
-                 aria-selected={i === currentProjectIndex}
-                 aria-label="Project {i+1}: {project.name}"
-                 on:keydown={(e) => handleDotKeydown(e, i)}
-                 on:click={() => currentProjectIndex = i}></div>
+        <div class="indicator-dots">
+          {#each projects as _, i}
+            <div class="dot {i === currentProjectIndex ? 'active' : ''}"></div>
           {/each}
         </div>
-        <div class="swipe-hint" aria-live="polite">Swipe to browse projects</div>
+        <div class="swipe-hint">Swipe to browse projects</div>
       </div>
       
-      <div class="card-container" aria-roledescription="slide" aria-label="Project {currentProjectIndex + 1} of {projects.length}">
+      <div class="card-container">
         {#key currentProjectIndex}
           <div class="dictionary-card" 
             style="--accent-color: {projects[currentProjectIndex].color};"
             in:fly={{ x: swipeDirection === 'right' ? 300 : -300, duration: 400, delay: 50, opacity: 0.2 }}
             out:fly={{ x: swipeDirection === 'right' ? -300 : 300, duration: 300, opacity: 0.2 }}
-            role="article"
           >
             <div class="mobile-card-content">
               <div class="content-area">
@@ -452,11 +324,7 @@
                     </div>
                   {/if}
                   <div class="usage">
-                    <a href="https://{projects[currentProjectIndex].domain}" 
-                       target="_blank" 
-                       rel="noopener noreferrer" 
-                       class="usage-example"
-                       aria-label="Visit {projects[currentProjectIndex].name} website at {projects[currentProjectIndex].domain}">
+                    <a href="https://{projects[currentProjectIndex].domain}" target="_blank" rel="noopener noreferrer" class="usage-example">
                       {projects[currentProjectIndex].domain}
                     </a>
                   </div>
@@ -466,16 +334,14 @@
               <div class="mobile-logo-area">
                 <div class="logo-container">
                   {#if projects[currentProjectIndex].useTyper}
-                    <div class="viveros-logo" aria-hidden="true">
+                    <div class="viveros-logo">
                       <FlowerLogo 
                         text="V" 
                         color={projects[currentProjectIndex].color}
                       />
                     </div>
                   {:else if projects[currentProjectIndex].logo}
-                    <img src={projects[currentProjectIndex].logo} 
-                         alt="{projects[currentProjectIndex].name} logo" 
-                         class="project-logo" />
+                    <img src={projects[currentProjectIndex].logo} alt="{projects[currentProjectIndex].name} logo" class="project-logo" />
                   {/if}
                 </div>
               </div>
@@ -484,16 +350,16 @@
         {/key}
       </div>
       
-      <div class="mobile-navigation" role="navigation" aria-label="Project navigation">
+      <div class="mobile-navigation">
         <button class="nav-button prev" on:click={prevProject} aria-label="Previous project">←</button>
         <button class="nav-button next" on:click={nextProject} aria-label="Next project">→</button>
       </div>
     </div>
   {:else}
     <!-- Desktop grid view -->
-    <div class="projects-grid" role="list" aria-label="Projects list">
-      {#each projects as project, i}
-        <div class="dictionary-card" style="--accent-color: {project.color};" role="listitem" aria-label="{project.name} project">
+    <div class="projects-grid">
+      {#each projects as project}
+        <div class="dictionary-card" style="--accent-color: {project.color};">
           <div class="content-area">
             <div class="term-container">
               <h2 class="term">{project.name}</h2>
@@ -517,11 +383,7 @@
                 </div>
               {/if}
               <div class="usage">
-                <a href="https://{project.domain}" 
-                   target="_blank" 
-                   rel="noopener noreferrer" 
-                   class="usage-example"
-                   aria-label="Visit {project.name} website at {project.domain}">
+                <a href="https://{project.domain}" target="_blank" rel="noopener noreferrer" class="usage-example">
                   {project.domain}
                 </a>
               </div>
@@ -531,16 +393,14 @@
           <div class="logo-area">
             <div class="logo-container">
               {#if project.useTyper}
-                <div class="viveros-logo" aria-hidden="true">
+                <div class="viveros-logo">
                   <FlowerLogo 
                     text="V" 
                     color={project.color}
                   />
                 </div>
               {:else if project.logo}
-                <img src={project.logo} 
-                     alt="{project.name} logo" 
-                     class="project-logo" />
+                <img src={project.logo} alt="{project.name} logo" class="project-logo" />
               {/if}
             </div>
           </div>
@@ -550,7 +410,7 @@
   {/if}
 </div>
 
-<div class="image-container" aria-hidden="true">
+<div class="image-container">
   <div class="image-with-bubble">
     <img 
       src="./icke.png" 
@@ -774,9 +634,9 @@
   
   .pronunciation {
     font-family: 'Jost', sans-serif;
-    font-weight: 500;
+    font-weight: 400;
     font-size: 14px;
-    color: rgba(0, 0, 0, 0.75);
+    color: #666;
     font-style: italic;
   }
   
@@ -784,9 +644,8 @@
     font-family: 'Jost', sans-serif;
     font-style: italic;
     font-size: 14px;
-    color: rgba(0, 0, 0, 0.7);
+    color: #555;
     text-align: right;
-    font-weight: 500;
   }
   
   .definition-container {
@@ -811,11 +670,10 @@
     font-family: 'Jost', sans-serif;
     font-size: 14px;
     margin-top: 10px;
-    color: rgba(0, 0, 0, 0.75);
+    color: #555;
     display: flex;
     align-items: baseline;
     gap: 8px;
-    font-weight: 500;
   }
   
   .usage-label {
@@ -1120,23 +978,23 @@
   }
   
   .swipe-hint {
-    font-size: 14px;
-    color: rgba(0, 0, 0, 0.85);
+    font-size: 12px; /* Increased from 11px */
+    color: rgba(0, 0, 0, 0.7); /* Increased contrast from 0.5 to 0.7 */
     margin-bottom: 4px;
-    font-weight: 600;
+    font-weight: 500; /* Added font weight for better visibility */
     animation: pulse 3s infinite;
   }
   
   @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.8; }
+    0%, 100% { opacity: 0.9; } /* Increased from 0.8 */
+    50% { opacity: 0.7; } /* Increased from 0.5 */
   }
   
   /* Mobile navigation - position directly under the card */
   .mobile-navigation {
     display: flex;
     justify-content: center;
-    gap: 20px;
+    gap: 20px; /* Reduced from 40px to bring arrows closer together */
     width: 100%;
     margin-top: 0;
     margin-bottom: 12px;
@@ -1154,8 +1012,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
-    color: rgba(0, 0, 0, 0.9);
+    font-size: 28px; /* Increased from 24px for better visibility */
+    color: rgba(0, 0, 0, 0.8); /* Darker color for better contrast */
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     box-shadow: none;
@@ -1178,12 +1036,12 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    min-width: 0;
-    overflow: hidden;
+    min-width: 0; /* Allow content to shrink if needed */
+    overflow: hidden; /* Prevent content overflow */
   }
   
   .mobile-card-content .content-area {
-    padding: 16px 16px 14px;
+    padding: 16px 16px 14px; /* Slightly reduced bottom padding */
   }
   
   .mobile-logo-area {
@@ -1198,13 +1056,13 @@
     border-bottom-left-radius: 8px;
     border-bottom-right-radius: 8px;
     box-sizing: border-box;
-    min-height: 240px;
+    min-height: 240px; /* Increased from 180px */
   }
   
   .mobile-logo-area .logo-container {
     width: 100%;
     max-width: 220px;
-    height: 220px;
+    height: 220px; /* Increased from 160px */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -1212,99 +1070,11 @@
   
   .mobile-logo-area .project-logo {
     max-width: 100%;
-    max-height: 220px;
+    max-height: 220px; /* Increased from 160px */
     object-fit: contain;
   }
   
   .mobile-project-swipe .viveros-logo {
-    min-height: 220px;
-  }
-  
-  /* Skip link for keyboard users */
-  .skip-link {
-    position: absolute;
-    left: -9999px;
-    top: 0;
-    z-index: 999;
-    padding: 1rem;
-    background-color: white;
-    color: black;
-    font-weight: bold;
-    text-decoration: none;
-    transition: none;
-  }
-  
-  .skip-link:focus {
-    left: 0;
-    outline: 3px solid black;
-  }
-  
-  /* Focus styles for improved keyboard navigation */
-  :global(*:focus) {
-    outline: 3px solid #000 !important;
-    outline-offset: 2px !important;
-  }
-  
-  :global(*:focus-visible) {
-    outline: 3px solid #000 !important;
-    outline-offset: 2px !important;
-  }
-  
-  /* Exception for the projects container */
-  .projects-container:focus {
-    outline: none !important;
-  }
-  
-  .nav-button:focus {
-    outline: 3px solid #000;
-    outline-offset: 3px;
-    background-color: rgba(0, 0, 0, 0.1);
-  }
-  
-  .usage-example:focus {
-    outline: 3px solid #000;
-    text-decoration: underline;
-  }
-  
-  /* Screen reader only */
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border-width: 0;
-  }
-  
-  /* Loading indicator */
-  .loading-indicator {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(252, 183, 102, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 999;
-  }
-  
-  .loading-spinner {
-    width: 50px;
-    height: 50px;
-    border: 5px solid rgba(0, 0, 0, 0.1);
-    border-radius: 50%;
-    border-top-color: #000;
-    animation: spin 1s ease-in-out infinite;
-  }
-  
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
+    min-height: 220px; /* Increased from 160px */
   }
 </style>
